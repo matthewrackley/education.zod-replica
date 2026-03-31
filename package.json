@@ -1,0 +1,33 @@
+{
+  "name": "zod-replica",
+  "version": "1.0.0",
+  "description": "This is a replication of zod to help me focus and learn best practices for library design and use of git and industry standards.",
+  "keywords": [
+    "education",
+    "learning",
+    "knowledge",
+    "school",
+    "practice",
+    "library",
+    "design"
+  ],
+  "homepage": "https://github.com/matthewrackley/education.zod-replica#readme",
+  "bugs": {
+    "url": "https://github.com/matthewrackley/education.zod-replica/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matthewrackley/education.zod-replica.git"
+  },
+  "license": "MIT",
+  "author": "Matthew Rackley",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}
