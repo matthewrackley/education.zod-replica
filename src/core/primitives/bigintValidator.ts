@@ -1,9 +1,9 @@
 import BaseValidator from '../baseValidator';
 
-export class BooleanValidator extends BaseValidator {
-  type: "boolean" = 'boolean';
+export class BigIntValidator extends BaseValidator {
+  type: "bigint" = 'bigint';
   validate(input: unknown) {
-    if (typeof input === 'boolean') {
+    if (typeof input === 'bigint') {
       return this.success(input);
     }
 
@@ -11,4 +11,4 @@ export class BooleanValidator extends BaseValidator {
   }
 }
 
-export default BooleanValidator;
+export default BigIntValidator;

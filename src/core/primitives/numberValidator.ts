@@ -1,22 +1,13 @@
 import BaseValidator from '../baseValidator';
 
-class NumberValidator extends BaseValidator {
-
+export class NumberValidator extends BaseValidator {
+  type: "number" = 'number';
   validate(input: unknown) {
     if (typeof input === 'number') {
       return this.success(input);
     }
 
-    return this.failure(input, [
-      {
-        path: [],
-        message: `Expected a number but received ${typeof input}`,
-        code: 'invalid_type',
-        expected: 'number',
-        received: input
-
-      }
-    ]);
+    return this.failure(input, [this.invalidType(input)]);
   }
 }
 
