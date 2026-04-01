@@ -1,3 +1,6 @@
+
+type BasePrimitive = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function" | "array" | "null" | "array-like";
+
 interface Issue {
   path: string[];
   code: string;
@@ -6,12 +9,12 @@ interface Issue {
   message: string;
 }
 
-type ValidationResult =
-  | ValidationSuccess
+type ValidationResult<T = unknown> =
+  | ValidationSuccess<T>
   | ValidationFailure;
 
-interface ValidationSuccess {
-  input: unknown;
+interface ValidationSuccess<T> {
+  input: T;
   isValid: true;
 }
 
@@ -22,8 +25,9 @@ interface ValidationFailure {
 }
 
 export type {
+  BasePrimitive,
   Issue,
   ValidationResult,
   ValidationSuccess,
-  ValidationFailure,
+  ValidationFailure
 }
