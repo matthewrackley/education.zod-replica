@@ -1,6 +1,6 @@
 # Zod-replica
 
-This is a TypeScript library built from scratch that mimics the functionality of Zod. The intent is not to pass this off as my own work. Instead, I am using this as a learning exercise to understand the following things:
+This is a TypeScript library built from scratch that mimics the functionality of [Zod](#attribution). The intent is not to pass this off as my own work. Instead, I am using this as a learning exercise to understand the following things:
 
 - How to design a validation library
 - How to follow good software design principles
