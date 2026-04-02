@@ -35,7 +35,11 @@ export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValida
   }
   protected _validate (input: unknown) {
     if (typeof input === 'object' && input !== null && Array.isArray(input)) {
-      return this.success(input as SchemaToType<TSchema>);
+      const result = this.builder(input, this.validators);
+      if (result.issues.length > 0) {
+        return this.success(input as SchemaToType<TSchema>);
+      }
+      return this.failure(input, result.issues);
     }
     return this.failure(input, [this.invalidType(input)]);
   }
@@ -55,12 +59,11 @@ export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValida
   }
 
 
-  builder<TNext extends ArraySchema> (input: unknown[], elements: TSchema) {
+  protected builder(input: unknown[], elements: TSchema) {
     const built = {} as { issues: ArrayIssue[]; output: SchemaToTuple<TSchema>; };
     built.issues = [] as ArrayIssue[];
     built.output = [] as SchemaToTuple<TSchema>;
-    const validators = elements.map((element, i) => {
-
+    elements.forEach((element, i) => {
       const isValid = element.validate(input[i]);
       if (!isValid.isValid) {
         built.issues.push(...isValid.issues.map((issue): ArrayIssue => ({
@@ -70,10 +73,8 @@ export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValida
       } else {
         built.output[i] = isValid.input as SchemaToTuple<TSchema>[Extract<keyof TSchema, number>];
       };
-      return built;
     });
-    const useValidator = validators.every(v => v instanceof BaseValidator) ? validators : validator instanceof BaseValidator ? [validator] : null;
-    return new ArrayValidator(...useValidator) as TNext extends ArraySchema ? ArrayValidator<TNext> : TNext extends ArraySchema[number] ? ArrayValidator<TNext[]> : never;
+    return built;
   }
 }
 
