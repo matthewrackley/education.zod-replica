@@ -1,4 +1,4 @@
-type BasePrimitive = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function" | "array" | "null" | "array-like";
+type BasePrimitive = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function" | "array" | "null" | "array-like" | "union";
 
 
 
@@ -18,7 +18,7 @@ type ValidationResult<T = unknown> =
   | ValidationFailure;
 
 interface ValidationSuccess<T> {
-  input: T;
+  output: T;
   isValid: true;
 }
 

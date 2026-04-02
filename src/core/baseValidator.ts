@@ -1,5 +1,6 @@
 import { BasePrimitive, Issue, ValidationFailure, ValidationResult, ValidationSuccess } from './core.types';
 import OptionalValidator from './util/optionalValidator';
+import UnionValidator from './util/unionValidator';
 
 export class ValidationError extends Error {
   issues: Issue[];
@@ -52,7 +53,7 @@ export abstract class BaseValidator<TOutput> {
    */
   protected success(input: TOutput): ValidationSuccess<TOutput> {
     return {
-      input,
+      output: input,
       isValid: true,
     };
   }
@@ -129,7 +130,7 @@ export abstract class BaseValidator<TOutput> {
   public parse(input: unknown): TOutput  {
     const result = this.validate(input);
     if (result.isValid) {
-      return result.input;
+      return result.output;
     }
     throw new ValidationError(result.issues);
   }
@@ -137,6 +138,7 @@ export abstract class BaseValidator<TOutput> {
   public optional () {
     return new OptionalValidator(this);
   }
+
 }
 
 
