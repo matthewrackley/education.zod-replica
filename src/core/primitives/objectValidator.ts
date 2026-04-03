@@ -1,24 +1,6 @@
 import BaseValidator from '../baseValidator';
-import { Issue } from '../core.types';
-import NumberValidator from './numberValidator';
-import StringValidator from './stringValidator';
 
-export interface ObjectSchema {
-  [key: string]: SchemaNode;
-}
 
-type SchemaNode = BaseValidator<unknown> | ObjectSchema;
-
-type NodeToType<TNode extends SchemaNode> =
-  TNode extends BaseValidator<infer TOutput>
-    ? TOutput
-    : TNode extends ObjectSchema
-      ? SchemaToType<TNode>
-      : never;
-
-export type SchemaToType<TSchema extends ObjectSchema> = TSchema extends ObjectSchema ? {
-  [K in keyof TSchema]: NodeToType<TSchema[K]>;
-} : never;
 
 export class ObjectValidator<Schema extends ObjectSchema> extends BaseValidator<SchemaToType<Schema>> {
   type: "object" = 'object';
@@ -41,14 +23,14 @@ export class ObjectValidator<Schema extends ObjectSchema> extends BaseValidator<
     const issues: Issue[] = [];
     const output: Partial<SchemaToType<TObject>> = {};
 
-    for (const key of Object.keys(schema) as Array<Extract<keyof TObject, string>>) {
+    for (const key of Object.keys(schema) as Array<Extract<keyof typeof schema, string>>) {
       const schemaNode = schema[key];
-      const inputValue = input[key];
+      const inputValue = input[key as keyof typeof input];
       const nextPath = [...path, key];
 
       if (schemaNode instanceof BaseValidator) {
         const result = schemaNode.safeParse(inputValue);
-        if (!result.isValid) {
+        if (result.isValid === false) {
           issues.push(...result.issues.map((issue): Issue => ({
             ...issue,
             path: [
@@ -57,8 +39,10 @@ export class ObjectValidator<Schema extends ObjectSchema> extends BaseValidator<
             ]
           })));
         }
-        output[key] = result.input as SchemaToType<TObject>[Extract<keyof TObject, string>];
-        continue;
+        if (result.isValid === true) {
+          output[key as keyof typeof output] = result.output as SchemaToType<TObject>[keyof typeof output];
+          continue;
+        }
       }
 
       // If the schema node is an object (but not an array), recursively build the output for the nested object.
@@ -79,11 +63,5 @@ export class ObjectValidator<Schema extends ObjectSchema> extends BaseValidator<
   }
 }
 
-const test = new ObjectValidator({
-  name: new StringValidator().min(2).max(50),
-  age: new NumberValidator(),
-}).parse({
-  name: "John Doe",
-  age: 30,
-});
+
 export default ObjectValidator;

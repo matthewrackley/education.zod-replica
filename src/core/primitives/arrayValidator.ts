@@ -1,35 +1,17 @@
 import BaseValidator from '../baseValidator';
-import { ArrayIssue } from '../core.types';
-import UnionValidator from '../util/unionValidator';
+
+import { Union } from '../util/unionValidator';
 import NumberValidator from './numberValidator';
 import StringValidator from './stringValidator';
 
-type ArraySchema = BaseValidator<unknown>[];
+type UnionValidate = { _validate<TSchema extends ArraySchema> (input: unknown): ValidationResult<ArraySchemaToType<TSchema>> };
 
-type ValidatorToType<TValidator extends BaseValidator<unknown>> =
-  TValidator extends BaseValidator<infer TOutput> ? TOutput : never;
-
-type SchemaToTuple<TSchema extends ArraySchema> = {
-  [K in keyof TSchema]: TSchema[K] extends BaseValidator<unknown>
-    ? ValidatorToType<TSchema[K]>
-    : never;
-};
-type TupleToUnion<TTuple extends unknown[]> = TTuple[number][];
-
-export type SchemaToType<TSchema extends ArraySchema> =
-  TSchema['length'] extends 0
-    ? unknown[]
-    : TSchema['length'] extends 1
-      ? Array<ValidatorToType<TSchema[0]>>
-      : SchemaToTuple<TSchema>;
-
-
-export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValidator<SchemaToType<TSchema>> {
+export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValidator<ArraySchemaToType<TSchema>> {
   type: "array" = 'array';
   protected validators: TSchema;
-  constructor (...elements: TSchema) {
+  constructor (elements: TSchema = [] as unknown as TSchema) {
     super();
-    if (elements.some((e) => !(e instanceof BaseValidator))) {
+    if (elements.length > 0 && elements.some((e) => !(e instanceof BaseValidator))) {
       throw new TypeError("All elements must be BaseValidator instances");
     }
     this.validators = elements;
@@ -46,28 +28,25 @@ export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValida
   }
 
   exact<TNextSchema extends ArraySchema> (...elements: TNextSchema) {
-    const validators = elements.map((element): BaseValidator<unknown> => {
+    const validators = elements.map((element)=> {
       if (element instanceof BaseValidator) {
         return element;
       }
       throw new TypeError(`Invalid schema element ${ element }`);
-    }) as BaseValidator<unknown>[];
-    return new ArrayValidator(...(validators as TNextSchema));
+    });
+    return new ArrayValidator((validators as TNextSchema));
   }
 
-  of<TItemValidator extends BaseValidator<unknown>[]> (...value: TItemValidator): ArrayValidator<[UnionValidator<TItemValidator[number][]>]> {
-    return new ArrayValidator(new UnionValidator(...value));
-  }
-  union() {
-    return new UnionValidator(this);
+  of<TItemValidator extends BaseValidator<unknown>[]> (...value: TItemValidator){
+    return new ArrayValidator<TItemValidator[number][]>(value);
   }
 
   protected builder(input: unknown[], elements: TSchema) {
     const issues = [] as ArrayIssue[];
-    const output = [] as SchemaToType<TSchema>;
+    const output = [] as ArraySchemaToType<TSchema>;
     elements.forEach((element, i) => {
       const result = element.validate(input[i]);
-      if (!result.isValid) {
+      if (result.isValid === false) {
         issues.push(...result.issues.map((issue): ArrayIssue => ({
           ...issue,
           position: i,
@@ -85,13 +64,18 @@ export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValida
 function isArrayIssue(value: unknown): value is ArrayIssue[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null && 'position' in item);
 }
+function arrayValidator<TSchema extends ArraySchema = []>(...elements: TSchema) {
 
+  return new ArrayValidator([...elements]);
+}
 
-new ArrayValidator().of(new StringValidator());
+const arr = arrayValidator().exact(new StringValidator(), new NumberValidator());
 
-const arr = new ArrayValidator().of(new StringValidator(), new NumberValidator());
+const arr2 = arrayValidator(new StringValidator(), new NumberValidator());
 
 
 
 const array = new ArrayValidator().of(new StringValidator(), new NumberValidator());
 const str = array.parse(["hello", 42]);
+
+export default ArrayValidator;
