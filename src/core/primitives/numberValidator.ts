@@ -2,7 +2,7 @@ import BaseValidator from '../baseValidator';
 
 export class NumberValidator extends BaseValidator<number> {
   type: "number" = 'number';
-  protected _validate(input: unknown) {
+  protected _validate(input: unknown)  {
     if (typeof input === 'number') {
       return this.success(input);
     }

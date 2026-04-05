@@ -2,7 +2,7 @@ import BaseValidator from '../baseValidator';
 
 export class BooleanValidator extends BaseValidator<boolean> {
   type: "boolean" = 'boolean';
-  protected _validate(input: unknown) {
+  protected _validate(input: unknown)  {
     if (typeof input === 'boolean') {
       return this.success(input);
     }

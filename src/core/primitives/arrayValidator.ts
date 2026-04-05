@@ -1,81 +1,86 @@
 import BaseValidator from '../baseValidator';
-
-import { Union } from '../util/unionValidator';
+import { isArray } from '../util/typeGuard';
 import NumberValidator from './numberValidator';
 import StringValidator from './stringValidator';
 
-type UnionValidate = { _validate<TSchema extends ArraySchema> (input: unknown): ValidationResult<ArraySchemaToType<TSchema>> };
-
-export class ArrayValidator<TSchema extends ArraySchema = []> extends BaseValidator<ArraySchemaToType<TSchema>> {
+export class ArrayValidator<TItem = unknown> extends BaseValidator<TItem[]> {
   type: "array" = 'array';
-  protected validators: TSchema;
-  constructor (elements: TSchema = [] as unknown as TSchema) {
+  protected validators: BaseValidator<TItem>[];
+  constructor (validators: BaseValidator<TItem>[] = []) {
     super();
-    if (elements.length > 0 && elements.some((e) => !(e instanceof BaseValidator))) {
-      throw new TypeError("All elements must be BaseValidator instances");
+    if (validators.length > 0 && validators.some((e) => !(e instanceof BaseValidator))) {
+      throw new TypeError("All validators must be BaseValidator instances");
     }
-    this.validators = elements;
+    this.validators = validators;
   }
   protected _validate (input: unknown) {
-    if (typeof input === 'object' && input !== null && Array.isArray(input)) {
+    if (isArray(input)) {
       const result = this.builder(input, this.validators);
-      if (isArrayIssue(result)) {
-        return this.failure(input, result);
+      if (!result.isValid) {
+        return this.failure(result.input, result.issues);
       }
-      return this.success(result);
+      return this.success(result.output);
     }
     return this.failure(input, [this.invalidType(input)]);
   }
 
-  exact<TNextSchema extends ArraySchema> (...elements: TNextSchema) {
-    const validators = elements.map((element)=> {
-      if (element instanceof BaseValidator) {
-        return element;
+  exact<TNextSchema extends BaseValidator<unknown>[]> (...validators: TNextSchema) {
+    const validatorList = validators.map((validator)=> {
+      if (validator instanceof BaseValidator) {
+        return validator;
       }
-      throw new TypeError(`Invalid schema element ${ element }`);
+      throw new TypeError(`Invalid schema validator ${ validator }`);
     });
-    return new ArrayValidator((validators as TNextSchema));
+    return new ArrayValidator<ValidatorToType<TNextSchema[number]>>(
+      validatorList as BaseValidator<ValidatorToType<TNextSchema[number]>>[]
+    );
   }
 
-  of<TItemValidator extends BaseValidator<unknown>[]> (...value: TItemValidator){
-    return new ArrayValidator<TItemValidator[number][]>(value);
+  of<TItemValidator extends BaseValidator<unknown>[]> (...validator: TItemValidator){
+    return new ArrayValidator<ValidatorToType<TItemValidator[number]>>(
+      validator as BaseValidator<ValidatorToType<TItemValidator[number]>>[]
+    );
   }
 
-  protected builder(input: unknown[], elements: TSchema) {
-    const issues = [] as ArrayIssue[];
-    const output = [] as ArraySchemaToType<TSchema>;
-    elements.forEach((element, i) => {
-      const result = element.validate(input[i]);
-      if (result.isValid === false) {
-        issues.push(...result.issues.map((issue): ArrayIssue => ({
-          ...issue,
-          position: i,
-        })));
-      } else {
-        output[i] = result.output as SchemaToTuple<TSchema>[Extract<keyof TSchema, number>];
-      };
-    });
-    if (output.length === input.length && issues.length === 0) {
-      return output;
+  protected builder(input: unknown[], validators: BaseValidator<TItem>[]) {
+    const issues = [] as Issue[];
+    const output = [] as TItem[];
+
+    for (let i = 0; i < input.length; i++) {
+      const value = input[i];
+      let matched = false;
+      const localIssues = [] as Issue[];
+
+      for (const validator of validators) {
+        const result = validator.validate(value);
+        if (result.isValid) {
+          output.push(result.output);
+          matched = true;
+          break;
+        }
+        localIssues.push(...this.withPath(result.issues, [String(i)]));
+      }
+
+      if (!matched) {
+        issues.push(this.defineIssue("none_valid", {
+          expected: validators.map((v) => v.type),
+          received: value,
+          path: ["array", String(i)],
+          index: i
+        }), ...localIssues);
+      }
     }
-    return issues;
+    if (issues.length > 0) return this.failure(input, issues);
+    return this.success(output);
   }
 }
-function isArrayIssue(value: unknown): value is ArrayIssue[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null && 'position' in item);
+
+function arrayValidator<TSchema extends BaseValidator<unknown>[]>(...elements: TSchema) {
+  return new ArrayValidator<ValidatorToType<TSchema[number]>>(
+    [...elements] as BaseValidator<ValidatorToType<TSchema[number]>>[]
+  );
 }
-function arrayValidator<TSchema extends ArraySchema = []>(...elements: TSchema) {
 
-  return new ArrayValidator([...elements]);
-}
-
-const arr = arrayValidator().exact(new StringValidator(), new NumberValidator());
-
-const arr2 = arrayValidator(new StringValidator(), new NumberValidator());
-
-
-
-const array = new ArrayValidator().of(new StringValidator(), new NumberValidator());
-const str = array.parse(["hello", 42]);
+const arr = arrayValidator(new StringValidator(), new NumberValidator());
 
 export default ArrayValidator;

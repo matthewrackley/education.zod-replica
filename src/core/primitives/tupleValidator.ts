@@ -1,4 +1,5 @@
 import BaseValidator from '../baseValidator';
+import { isArray } from '../util/typeGuard';
 
 export class TupleValidator<TSchema extends ArraySchema = []> extends BaseValidator<ArraySchemaToType<TSchema>> {
   type: "tuple" = 'tuple';
@@ -11,38 +12,53 @@ export class TupleValidator<TSchema extends ArraySchema = []> extends BaseValida
     this.validators = elements;
   }
   protected _validate (input: unknown) {
-    if (typeof input === 'object' && input !== null && Array.isArray(input)) {
+    if (isArray(input)) {
       const result = this.builder(input, this.validators);
-      if (isArrayIssue(result)) {
-        return this.failure(input, result);
+      if (result.isValid) {
+        return this.success(result.output);
       }
-      return this.success(result);
+      return this.failure(input, result.issues);
     }
     return this.failure(input, [this.invalidType(input)]);
   }
 
   protected builder(input: unknown[], elements: TSchema) {
-    const issues = [] as ArrayIssue[];
+    const issues = [] as Issue[];
     const output = [] as ArraySchemaToType<TSchema>;
-    elements.forEach((element, i) => {
-      const result = element.validate(input[i]);
+    const len = Math.max(input.length, elements.length);
+    for (let i = 0; i < len; i++) {
+      const result = elements[i].validate(input[i]);
       if (!result.isValid) {
         issues.push(...result.issues.map((issue): ArrayIssue => ({
           ...issue,
+          type: "array",
           position: i,
         })));
+        continue;
       } else {
-        output[i] = result.output as SchemaToTuple<TSchema>[Extract<keyof TSchema, number>];
-      };
-    });
-    if (output.length === input.length && issues.length === 0) {
-      return output;
+        output[i] = result.output as ArraySchemaToType<TSchema>[Extract<keyof TSchema, number>];
+      }
     }
-    return issues;
+    if (input.length > elements.length) {
+      issues.push(this.defineIssue("too_long",{
+        expected: elements,
+        received: input,
+        path: ["array", "length"]
+      }));
+    }
+    if (input.length < elements.length) {
+      issues.push(this.defineIssue("too_short",{
+        expected: elements,
+        received: input,
+        path: ["array", "length"]
+      }));
+    }
+
+    if (issues.length === elements.length && issues.length === 0) {
+      return this.success(output);
+    }
+    return this.failure(input, issues);
   }
-}
-function isArrayIssue(value: unknown): value is ArrayIssue[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null && 'position' in item);
 }
 
 export default TupleValidator;

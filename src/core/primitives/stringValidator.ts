@@ -8,32 +8,22 @@ interface StringValidatorRules {
 
 export class StringValidator extends BaseValidator<string> {
   type: "string" = 'string';
-  constructor (private readonly rules: StringValidatorRules = {}) {
+  constructor ( private readonly rules: StringValidatorRules = {}) {
     super();
   }
-  protected _validate (input: unknown) {
+  protected _validate(input: unknown)  {
     if (typeof input === 'string') {
       if (this.rules.minLength && input.length < this.rules.minLength) {
-        return this.failure(input, [
-          {
-            path: ["min"],
-            message: `String must be at least ${ this.rules.minLength } characters long`,
-            code: "min_length",
-            expected: this.rules.minLength,
-            received: input.length
-          }
-        ]);
+        return this.failure(input, [this.defineIssue("too_short", {
+          expected: this.rules.minLength,
+          received: input,
+        })]);
       }
       if (this.rules.maxLength && input.length > this.rules.maxLength) {
-        return this.failure(input, [
-          {
-            path: ["max"],
-            message: `String must be at most ${ this.rules.maxLength } characters long`,
-            code: "max_length",
-            expected: this.rules.maxLength,
-            received: input.length
-          }
-        ]);
+        return this.failure(input, [this.defineIssue("too_long", {
+          expected: this.rules.maxLength,
+          received: input,
+        })]);
       }
       return this.success(input);
     }
