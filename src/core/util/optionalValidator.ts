@@ -1,5 +1,4 @@
 import BaseValidator from '../baseValidator';
-import { BasePrimitive } from '../core.types';
 
 class OptionalValidator<TOutput = unknown> extends BaseValidator<TOutput | undefined> {
   type;
